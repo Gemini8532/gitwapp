@@ -1,0 +1,6 @@
+# Backend Config  
+APP_PORT={{PORT}}  
+APP_ENV=development
+
+# Frontend Config (Prefix with VITE_ to expose to client)  
+VITE_APP_NAME={{APP_NAME}}
