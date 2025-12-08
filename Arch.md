@@ -280,8 +280,13 @@ The project uses Tailwind CSS v4.
 - **Gitignore:** A root `.gitignore` is configured to exclude build artifacts like `bin/`, `frontend/dist/`, and `frontend/node_modules/`.
 
 ### Go Module
+Use libraries from the standard library where possible. If a library is not available, use a well-maintained third-party library.
+
 - **Module Name:** `github.com/Gemini8532/genapp`
 - **Embedding:** `frontend/embed.go` allows the Go backend to serve the compiled frontend.
+
+
+
 
 ## 9. Testing Strategy
 
