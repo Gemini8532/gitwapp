@@ -3,7 +3,7 @@ Project Outline: Local Git Management Web Application1. Architecture Overview**1
     1.1.2. **Reverse Proxy:** Nginx acts as the entry point, handling SSL termination and forwarding requests to the backend.
     1.1.3. **Frontend:** Single Page Application (SPA) built with React, TypeScript, and Tailwind CSS.
     1.1.4. **Backend:** RESTful API built with Golang.
-    1.1.5. **Data Persistence:** Simple JSON file storage for application state (user credentials, list of tracked repository paths).
+    1.1.5. **Data Persistence:** Stable configuration (user credentials, list of tracked repository paths) is stored in the operating system's standard application configuration directory (e.g., `~/.config/gitwapp/` on Linux).
     1.1.6. **Git Engine:** The backend interacts directly with the local file system to manage Git repositories using a Go-native git implementation.
 2. Backend Specification (Golang)**2.1. Binary Architecture**
     2.1.1. **Single Binary Design:** The application is built as a single Go binary that operates in different modes based on command-line arguments.
@@ -29,12 +29,12 @@ Project Outline: Local Git Management Web Application1. Architecture Overview**1
     2.2.5. **HTTP Client:** Standard library `net/http` for CLI mode to communicate with internal API.
 
 **2.3. Data Persistence (JSON File Storage)**
-    2.3.1. **File: `data/users.json`**
+    2.3.1. **File: `~/.config/gitwapp/users.json`**
         2.3.1.1. Array of user objects:
         2.3.1.2. `id` (String, UUID)
         2.3.1.3. `username` (String, Unique)
         2.3.1.4. `password_hash` (String, bcrypt)
-    2.3.2. **File: `data/repositories.json`**
+    2.3.2. **File: `~/.config/gitwapp/repositories.json`**
         2.3.2.1. Array of repository objects:
         2.3.2.2. `id` (String, UUID)
         2.3.2.3. `name` (String, Display name)
