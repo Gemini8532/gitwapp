@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Public API: Get all repos
+// handleGetRepos handles requests to retrieve all repositories. It is part of the public API.
 func (s *Server) handleGetRepos(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -32,7 +32,8 @@ func (s *Server) handleGetRepos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(repos)
 }
 
-// Public API: Get repo detailed status
+// handleRepoStatus handles requests for the detailed status of a single repository.
+// It is part of the public API.
 func (s *Server) handleRepoStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -60,11 +61,12 @@ func (s *Server) handleRepoStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
-// Public API: Stage file
+// StageRequest represents the request body for staging or unstaging a file.
 type StageRequest struct {
 	File string `json:"file"`
 }
 
+// handleStage handles requests to stage a single file in a repository.
 func (s *Server) handleStage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -97,6 +99,7 @@ func (s *Server) handleStage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleUnstage handles requests to unstage a single file in a repository.
 func (s *Server) handleUnstage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -129,6 +132,7 @@ func (s *Server) handleUnstage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleStageAll handles requests to stage all modified and new files in a repository.
 func (s *Server) handleStageAll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -153,6 +157,7 @@ func (s *Server) handleStageAll(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleUnstageAll handles requests to unstage all staged files in a repository.
 func (s *Server) handleUnstageAll(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
@@ -177,6 +182,7 @@ func (s *Server) handleUnstageAll(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// handleGetFile handles requests to retrieve the content of a specific file from a repository's working directory.
 func (s *Server) handleGetFile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -222,6 +228,7 @@ func (s *Server) handleGetFile(w http.ResponseWriter, r *http.Request) {
 	w.Write(content)
 }
 
+// handleGetDiff handles requests to get the diff of a specific file in a repository.
 func (s *Server) handleGetDiff(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -254,11 +261,12 @@ func (s *Server) handleGetDiff(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(diff))
 }
 
-// Public API: Commit
+// CommitRequest represents the request body for committing changes.
 type CommitRequest struct {
 	Message string `json:"message"`
 }
 
+// handleCommit handles requests to commit staged changes in a repository.
 func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -297,7 +305,7 @@ func (s *Server) handleCommit(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Public API: Push
+// handlePush handles requests to push committed changes to a remote repository.
 func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -323,7 +331,7 @@ func (s *Server) handlePush(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Public API: Pull
+// handlePull handles requests to pull changes from a remote repository.
 func (s *Server) handlePull(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -349,7 +357,7 @@ func (s *Server) handlePull(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Helper
+// getRepoByID is a helper function to find a repository by its ID.
 func (s *Server) getRepoByID(id string) (*models.Repository, error) {
 	repos, err := s.store.LoadRepositories()
 	if err != nil {

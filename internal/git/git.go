@@ -1,3 +1,5 @@
+// Package git provides a wrapper around the go-git library and git command-line
+// tool to perform common Git operations.
 package git
 
 import (
@@ -16,7 +18,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
-// Status represents the high-level status of a repository
+// Status represents the high-level status of a repository.
 type Status struct {
 	Clean    bool
 	Ahead    int
@@ -25,14 +27,19 @@ type Status struct {
 	Worktree git.Status
 }
 
+// Client is a wrapper for Git operations.
 type Client struct {
 	// wrapper if we need to store config
 }
 
+// Open opens a Git repository at the given path.
 func Open(path string) (*git.Repository, error) {
 	return git.PlainOpen(path)
 }
 
+// GetStatus returns the status of the Git repository at the given path.
+// It includes information about the current branch, ahead/behind status,
+// and the worktree status.
 func GetStatus(path string) (*Status, error) {
 	r, err := git.PlainOpen(path)
 	if err != nil {
@@ -86,6 +93,7 @@ func GetStatus(path string) (*Status, error) {
 	}, nil
 }
 
+// StageFile stages a single file in the repository.
 func StageFile(path string, file string) error {
 	r, err := git.PlainOpen(path)
 	if err != nil {
@@ -99,6 +107,8 @@ func StageFile(path string, file string) error {
 	return err
 }
 
+// UnstageFile unstages a single file. It uses the git command-line tool
+// as go-git does not provide a clean API for this.
 func UnstageFile(path string, file string) error {
 	// go-git doesn't have a clean API for unstaging a single file
 	// Use git command directly for reliability
@@ -107,18 +117,21 @@ func UnstageFile(path string, file string) error {
 	return cmd.Run()
 }
 
+// StageAll stages all changes in the repository.
 func StageAll(path string) error {
 	cmd := exec.Command("git", "add", "-A")
 	cmd.Dir = path
 	return cmd.Run()
 }
 
+// UnstageAll unstages all changes in the repository.
 func UnstageAll(path string) error {
 	cmd := exec.Command("git", "reset")
 	cmd.Dir = path
 	return cmd.Run()
 }
 
+// GetFileDiff gets the diff for a single file.
 func GetFileDiff(path string, file string) (string, error) {
 	// Get unified diff for the file
 	cmd := exec.Command("git", "diff", "HEAD", "--", file)
@@ -130,6 +143,7 @@ func GetFileDiff(path string, file string) (string, error) {
 	return string(output), nil
 }
 
+// Commit commits the staged changes with the given message.
 func Commit(path string, msg string) error {
 	r, err := git.PlainOpen(path)
 	if err != nil {
@@ -143,6 +157,7 @@ func Commit(path string, msg string) error {
 	return err
 }
 
+// Push pushes the commits to the remote repository.
 func Push(path string) error {
 	r, err := git.PlainOpen(path)
 	if err != nil {
@@ -159,6 +174,7 @@ func Push(path string) error {
 	})
 }
 
+// Pull pulls the latest changes from the remote repository.
 func Pull(path string) error {
 	r, err := git.PlainOpen(path)
 	if err != nil {
@@ -181,7 +197,8 @@ func Pull(path string) error {
 	})
 }
 
-// getSSHAuth attempts to get SSH authentication using ssh-agent or key files
+// getSSHAuth attempts to get SSH authentication using the ssh-agent or
+// common SSH key file locations.
 func getSSHAuth() (transport.AuthMethod, error) {
 	// Try ssh-agent first (most common and secure)
 	auth, err := ssh.NewSSHAgentAuth("git")
@@ -211,7 +228,8 @@ func getSSHAuth() (transport.AuthMethod, error) {
 	return nil, fmt.Errorf("no SSH authentication method available")
 }
 
-// getAuth gets appropriate authentication based on remote URL
+// getAuth determines the appropriate authentication method (SSH or HTTPS)
+// based on the remote URL of the repository.
 func getAuth(repoPath string) (transport.AuthMethod, error) {
 	r, err := git.PlainOpen(repoPath)
 	if err != nil {
@@ -239,7 +257,7 @@ func getAuth(repoPath string) (transport.AuthMethod, error) {
 	return getHTTPSAuth(remoteURL)
 }
 
-// getHTTPSAuth gets credentials from git credential helper
+// getHTTPSAuth retrieves HTTPS credentials using the git credential helper.
 func getHTTPSAuth(remoteURL string) (transport.AuthMethod, error) {
 	// Use git credential fill to get credentials
 	cmd := exec.Command("git", "credential", "fill")
@@ -271,7 +289,7 @@ func getHTTPSAuth(remoteURL string) (transport.AuthMethod, error) {
 	}, nil
 }
 
-// countCommitsBetween counts how many commits are in 'from' that are not in 'to'
+// countCommitsBetween counts the number of commits between two commit hashes.
 func countCommitsBetween(r *git.Repository, from, to plumbing.Hash) (int, error) {
 	if from == to {
 		return 0, nil
@@ -301,7 +319,7 @@ func countCommitsBetween(r *git.Repository, from, to plumbing.Hash) (int, error)
 	return count, nil
 }
 
-// Helper to check if a valid repo exists at path
+// IsRepo checks if a valid Git repository exists at the given path.
 func IsRepo(path string) bool {
 	_, err := git.PlainOpen(path)
 	return err == nil

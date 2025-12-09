@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-// LoggingMiddleware adds structured logging for HTTP requests using slog
+// LoggingMiddleware provides structured logging for HTTP requests using the slog package.
+// It logs the method, URL, status code, duration, remote address, and user agent
+// for each request.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -32,12 +34,15 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// loggingResponseWriter wraps http.ResponseWriter to capture status code
+// loggingResponseWriter is a wrapper around http.ResponseWriter that captures the
+// status code of the response.
 type loggingResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
 }
 
+// WriteHeader captures the status code and calls the underlying ResponseWriter's
+// WriteHeader method.
 func (lrw *loggingResponseWriter) WriteHeader(code int) {
 	lrw.statusCode = code
 	lrw.ResponseWriter.WriteHeader(code)

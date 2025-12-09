@@ -14,17 +14,20 @@ import (
 	"github.com/Gemini8532/gitwapp/internal/config"
 )
 
-// Default port - can be overridden at build time with:
+// defaultPort is the default port for the server to listen on.
+// It can be overridden at build time with:
 // go build -ldflags "-X main.defaultPort=8084"
 var defaultPort = "8080"
 
-// Build information - set at build time via ldflags
+// Build information, set at build time via ldflags.
 var (
 	version   = "dev"
 	buildDate = "unknown"
 	gitCommit = "unknown"
 )
 
+// main is the entry point of the application. It parses command-line
+// arguments and executes the corresponding command.
 func main() {
 	// Initialize logger ONCE based on environment
 	logger := initLogger()
@@ -53,7 +56,8 @@ func main() {
 	}
 }
 
-// initLogger creates a logger based on environment settings
+// initLogger creates a new logger based on the APP_ENV environment variable.
+// It returns a JSON logger for "production" and a text logger otherwise.
 func initLogger() *slog.Logger {
 	env := os.Getenv("APP_ENV")
 	if env == "production" {
@@ -62,6 +66,9 @@ func initLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, nil))
 }
 
+// runServer starts the GitWapp server. It parses command-line flags,
+// initializes the configuration store, manages the server process,
+// and starts the API server.
 func runServer() {
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
 	port := serveCmd.String("port", defaultPort, "Port to listen on")
@@ -95,6 +102,8 @@ func runServer() {
 	}
 }
 
+// stopServer stops a running GitWapp server process. It reads the PID
+// from the PID file and sends a termination signal to the process.
 func stopServer() {
 	store, err := config.NewStore()
 	if err != nil {
@@ -115,6 +124,9 @@ func stopServer() {
 	}
 }
 
+// manageProcess ensures that only one instance of the server is running.
+// It kills any existing server process and writes the current process ID
+// to the PID file.
 func manageProcess(pidPath string) error {
 	if err := killExistingServer(pidPath); err != nil {
 		slog.Error("Failed to kill existing server", "error", err)
@@ -132,6 +144,8 @@ func manageProcess(pidPath string) error {
 	return nil
 }
 
+// killExistingServer stops a running server process by reading its PID
+// from the specified PID file and sending it a termination signal.
 func killExistingServer(pidPath string) error {
 	data, err := os.ReadFile(pidPath)
 	if err != nil {
@@ -176,6 +190,7 @@ func killExistingServer(pidPath string) error {
 	return nil
 }
 
+// printUsage prints the command-line usage instructions to the console.
 func printUsage() {
 	fmt.Println("Usage: gitwapp <command> [options]")
 	fmt.Println("Commands:")

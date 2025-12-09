@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware handlers.
 package middleware
 
 import (
@@ -21,12 +22,14 @@ func init() {
 	jwtSecret = []byte(secret)
 }
 
+// Claims represents the JWT claims.
 type Claims struct {
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
+// GenerateToken generates a new JWT token for a given user.
 func GenerateToken(userID, username string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
@@ -42,6 +45,7 @@ func GenerateToken(userID, username string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
+// JWTMiddleware is a middleware that validates JWT tokens.
 func JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
