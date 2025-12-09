@@ -29,8 +29,9 @@ export const Login: React.FC = () => {
         {error && <div className="p-3 text-sm text-red-600 bg-red-100 rounded dark:bg-red-900 dark:text-red-200">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+            <label htmlFor="username" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
             <input
+              id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -39,8 +40,9 @@ export const Login: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+            <label htmlFor="password" className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
