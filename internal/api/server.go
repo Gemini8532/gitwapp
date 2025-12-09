@@ -70,10 +70,19 @@ func (s *Server) routes() {
 	internal.Use(localOnlyMiddleware)
 	internal.HandleFunc("/health", s.handleHealth).Methods("GET")
 
+	// Repository management (admin)
 	internal.HandleFunc("/repos", s.handleListRepos).Methods("GET")
 	internal.HandleFunc("/repos", s.handleAddRepo).Methods("POST")
 	internal.HandleFunc("/repos/{id}", s.handleRemoveRepo).Methods("DELETE")
 
+	// Git operations (same as public API, but no auth required)
+	internal.HandleFunc("/repos/{id}/status", s.handleRepoStatus).Methods("GET")
+	internal.HandleFunc("/repos/{id}/stage", s.handleStage).Methods("POST")
+	internal.HandleFunc("/repos/{id}/commit", s.handleCommit).Methods("POST")
+	internal.HandleFunc("/repos/{id}/push", s.handlePush).Methods("POST")
+	internal.HandleFunc("/repos/{id}/pull", s.handlePull).Methods("POST")
+
+	// User management (admin)
 	internal.HandleFunc("/users", s.handleListUsers).Methods("GET")
 	internal.HandleFunc("/users", s.handleAddUser).Methods("POST")
 	internal.HandleFunc("/users/{id}", s.handleRemoveUser).Methods("DELETE")
