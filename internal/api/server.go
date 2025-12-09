@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,17 +13,32 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type Server struct {
-	router *mux.Router
-	store  *config.Store
-	http   *http.Server
+type BuildInfo struct {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date"`
+	GitCommit string `json:"git_commit"`
 }
 
-func NewServer(store *config.Store) *Server {
+type Server struct {
+	router    *mux.Router
+	store     *config.Store
+	http      *http.Server
+	buildInfo BuildInfo
+}
+
+func NewServer(store *config.Store, buildInfo ...BuildInfo) *Server {
 	r := mux.NewRouter()
+
+	// Use provided buildInfo or default to empty
+	var bi BuildInfo
+	if len(buildInfo) > 0 {
+		bi = buildInfo[0]
+	}
+
 	s := &Server{
-		router: r,
-		store:  store,
+		router:    r,
+		store:     store,
+		buildInfo: bi,
 	}
 	s.routes()
 	return s
@@ -35,6 +51,7 @@ func (s *Server) routes() {
 	// Public API
 	apiPublic := s.router.PathPrefix("/api").Subrouter()
 	apiPublic.HandleFunc("/health", s.handleHealth).Methods("GET")
+	apiPublic.HandleFunc("/info", s.handleInfo).Methods("GET")
 	apiPublic.HandleFunc("/login", s.handleLogin).Methods("POST")
 
 	// Protected API
@@ -86,6 +103,11 @@ func (s *Server) Handler() http.Handler {
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
+}
+
+func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s.buildInfo)
 }
 
 func localOnlyMiddleware(next http.Handler) http.Handler {

@@ -18,6 +18,13 @@ import (
 // go build -ldflags "-X main.defaultPort=8084"
 var defaultPort = "8080"
 
+// Build information - set at build time via ldflags
+var (
+	version   = "dev"
+	buildDate = "unknown"
+	gitCommit = "unknown"
+)
+
 func main() {
 	// Initialize logger ONCE based on environment
 	logger := initLogger()
@@ -76,7 +83,12 @@ func runServer() {
 		slog.Warn("Failed to manage process", "error", err)
 	}
 
-	server := api.NewServer(store)
+	buildInfo := api.BuildInfo{
+		Version:   version,
+		BuildDate: buildDate,
+		GitCommit: gitCommit,
+	}
+	server := api.NewServer(store, buildInfo)
 	if err := server.Start(*port); err != nil {
 		slog.Error("Server failed to start", "error", err)
 		os.Exit(1)

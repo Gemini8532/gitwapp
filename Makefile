@@ -26,12 +26,22 @@ build-frontend: check-env
 # Track all Go files in cmd/server and internal for dependency tracking
 SERVER_SOURCES := $(shell find cmd/server internal -name '*.go' -type f 2>/dev/null)
 
+# Build information
+VERSION ?= dev
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
 build-backend: check-env $(SERVER_SOURCES)
 	@mkdir -p bin
 	@mkdir -p frontend/dist
 	@touch frontend/dist/.keep
-	go build -ldflags "-X main.defaultPort=$(APP_PORT)" -o bin/server ./cmd/server
-	@echo "Built bin/server with default port $(APP_PORT)"
+	go build -ldflags "\
+		-X main.defaultPort=$(APP_PORT) \
+		-X main.version=$(VERSION) \
+		-X main.buildDate=$(BUILD_DATE) \
+		-X main.gitCommit=$(GIT_COMMIT)" \
+		-o bin/server ./cmd/server
+	@echo "Built bin/server v$(VERSION) ($(GIT_COMMIT)) with port $(APP_PORT)"
 
 nginx-config: check-env
 	@sed 's/{{APP_PORT}}/$(APP_PORT)/g' templates/nginx.conf

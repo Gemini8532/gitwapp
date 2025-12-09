@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Gemini8532/gitwapp/internal/api"
 	"github.com/Gemini8532/gitwapp/pkg/models"
@@ -61,6 +62,10 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 			return nil
 		}
 		id := args[3]
+		// Basic validation - ID should not be empty or look like a path
+		if id == "" || id == "." || id == ".." || strings.Contains(id, "/") {
+			return fmt.Errorf("invalid repository ID: %q\nUse 'gitwapp repo list' to see repository IDs", id)
+		}
 		// URL encode the ID to handle special characters
 		encodedID := url.PathEscape(id)
 		req, _ := http.NewRequest("DELETE", baseURL+"/repos/"+encodedID, nil)
@@ -134,6 +139,10 @@ func runUserCommand(args []string, baseURL string, out io.Writer) error {
 			return nil
 		}
 		id := args[3]
+		// Basic validation - ID should not be empty or look like a path
+		if id == "" || id == "." || id == ".." || strings.Contains(id, "/") {
+			return fmt.Errorf("invalid user ID: %q\nUse 'gitwapp user list' to see user IDs", id)
+		}
 		encodedID := url.PathEscape(id)
 		req, _ := http.NewRequest("DELETE", baseURL+"/users/"+encodedID, nil)
 		resp, err := http.DefaultClient.Do(req)
