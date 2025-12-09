@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Gemini8532/gitwapp/internal/git"
 	"github.com/Gemini8532/gitwapp/pkg/models"
@@ -172,6 +175,51 @@ func (s *Server) handleUnstageAll(w http.ResponseWriter, r *http.Request) {
 
 	slog.InfoContext(ctx, "All files unstaged successfully", "id", id, "path", repo.Path)
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleGetFile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	vars := mux.Vars(r)
+	id := vars["id"]
+	file := r.URL.Query().Get("file")
+
+	if file == "" {
+		http.Error(w, "File parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	slog.InfoContext(ctx, "Getting file content", "id", id, "file", file)
+
+	repo, err := s.getRepoByID(id)
+	if err != nil {
+		slog.WarnContext(ctx, "Get file failed - repository not found", "id", id)
+		http.Error(w, "Repository not found", http.StatusNotFound)
+		return
+	}
+
+	// Security check: ensure path is within repo
+	targetPath := filepath.Clean(filepath.Join(repo.Path, file))
+	if !strings.HasPrefix(targetPath, filepath.Clean(repo.Path)) {
+		slog.WarnContext(ctx, "Get file failed - path traversal attempt", "id", id, "file", file)
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	content, err := os.ReadFile(targetPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
+		slog.ErrorContext(ctx, "Get file failed - read error", "id", id, "file", file, "error", err)
+		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		return
+	}
+
+	// Detect content type or default to plain text
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write(content)
 }
 
 func (s *Server) handleGetDiff(w http.ResponseWriter, r *http.Request) {

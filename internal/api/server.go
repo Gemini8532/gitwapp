@@ -60,6 +60,7 @@ func (s *Server) routes() {
 
 	apiProtected.HandleFunc("/repos", s.handleGetRepos).Methods("GET")
 	apiProtected.HandleFunc("/repos/{id}/status", s.handleRepoStatus).Methods("GET")
+	apiProtected.HandleFunc("/repos/{id}/file", s.handleGetFile).Methods("GET")
 	apiProtected.HandleFunc("/repos/{id}/diff", s.handleGetDiff).Methods("GET")
 	apiProtected.HandleFunc("/repos/{id}/stage", s.handleStage).Methods("POST")
 	apiProtected.HandleFunc("/repos/{id}/stage-all", s.handleStageAll).Methods("POST")
@@ -81,6 +82,7 @@ func (s *Server) routes() {
 
 	// Git operations (same as public API, but no auth required)
 	internal.HandleFunc("/repos/{id}/status", s.handleRepoStatus).Methods("GET")
+	internal.HandleFunc("/repos/{id}/file", s.handleGetFile).Methods("GET")
 	internal.HandleFunc("/repos/{id}/diff", s.handleGetDiff).Methods("GET")
 	internal.HandleFunc("/repos/{id}/stage", s.handleStage).Methods("POST")
 	internal.HandleFunc("/repos/{id}/stage-all", s.handleStageAll).Methods("POST")

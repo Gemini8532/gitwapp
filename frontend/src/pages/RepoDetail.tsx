@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { ArrowUp, ArrowDown, Plus, Minus, Check, FileDiff } from 'lucide-react';
+import { ArrowUp, ArrowDown, Plus, Minus, Check, FileDiff, ArrowLeft } from 'lucide-react';
 import clsx from 'clsx';
 
 interface GitStatus {
@@ -73,6 +73,10 @@ export const RepoDetail: React.FC = () => {
   // Helper to check if file is staged (Staging status is not 0, 32-' ', or 63-'?')
   const isStaged = (stat: any) => stat.Staging !== 0 && stat.Staging !== 32 && stat.Staging !== 63;
 
+  const handleFileClick = (file: string) => {
+    navigate(`/repos/${id}/file?file=${encodeURIComponent(file)}`);
+  };
+
   const handleDiffClick = (file: string) => {
     navigate(`/repos/${id}/diff?file=${encodeURIComponent(file)}`);
   };
@@ -87,16 +91,25 @@ export const RepoDetail: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <span className="text-gray-500">Branch:</span> {status.Branch}
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={clsx("px-2 py-0.5 rounded text-sm font-medium", status.Clean ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
-              {status.Clean ? "Clean" : "Dirty"}
-            </span>
-            {status.Ahead > 0 && <span className="flex items-center text-blue-600 text-sm"><ArrowUp className="w-4 h-4 mr-1" /> {status.Ahead}</span>}
-            {status.Behind > 0 && <span className="flex items-center text-orange-600 text-sm"><ArrowDown className="w-4 h-4 mr-1" /> {status.Behind}</span>}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <span className="text-gray-500">Branch:</span> {status.Branch}
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={clsx("px-2 py-0.5 rounded text-sm font-medium", status.Clean ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")}>
+                {status.Clean ? "Clean" : "Dirty"}
+              </span>
+              {status.Ahead > 0 && <span className="flex items-center text-blue-600 text-sm"><ArrowUp className="w-4 h-4 mr-1" /> {status.Ahead}</span>}
+              {status.Behind > 0 && <span className="flex items-center text-orange-600 text-sm"><ArrowDown className="w-4 h-4 mr-1" /> {status.Behind}</span>}
+            </div>
           </div>
         </div>
         <div className="flex gap-2 mt-4 sm:mt-0">
@@ -152,12 +165,9 @@ export const RepoDetail: React.FC = () => {
                 return (
                   <li key={file} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
                     <span
-                      className={clsx(
-                        "truncate flex items-center gap-2",
-                        !isUntracked && "cursor-pointer hover:underline"
-                      )}
-                      onClick={() => !isUntracked && handleDiffClick(file)}
-                      title={isUntracked ? "Untracked file" : "View Diff"}
+                      className="truncate flex items-center gap-2 cursor-pointer hover:underline"
+                      onClick={() => handleFileClick(file)}
+                      title="View File"
                     >
                       {staged && <span className="text-green-600 text-xs">●</span>}
                       {isUntracked && <span className="text-gray-400 text-xs text-[10px] border border-gray-300 dark:border-gray-600 px-1 rounded">NEW</span>}

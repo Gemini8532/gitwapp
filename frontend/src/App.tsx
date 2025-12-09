@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { RepoDetail } from './pages/RepoDetail';
 import { RepoDiff } from './pages/RepoDiff';
+import { RepoFile } from './pages/RepoFile';
 import { Layout } from './components/Layout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -28,6 +29,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="repos/:id" element={<RepoDetail />} />
             <Route path="repos/:id/diff" element={<RepoDiff />} />
+            <Route path="repos/:id/file" element={<RepoFile />} />
           </Route>
         </Routes>
       </AuthProvider>
