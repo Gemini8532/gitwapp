@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { Link } from 'react-router-dom';
 import { FolderGit, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 import clsx from 'clsx';
+import { shortenPath } from '../utils/pathUtils';
 
 interface Repository {
   id: string;
@@ -98,7 +99,7 @@ export const Dashboard: React.FC = () => {
                 <h3 className="text-lg font-medium truncate" title={repo.name}>{repo.name}</h3>
               </div>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 truncate" title={repo.path}>
-                {repo.path}
+                {shortenPath(repo.path)}
               </p>
 
               {/* Status Summary */}
