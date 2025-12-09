@@ -16,6 +16,11 @@ type AddUserRequest struct {
 	Password string `json:"password"`
 }
 
+type UserResponse struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
+
 func (s *Server) handleAddUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -26,7 +31,7 @@ func (s *Server) handleAddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.InfoContext(ctx, "Adding user", "username", req.Username)
+	slog.InfoContext(ctx, "Adding user", "username", req.Username, "password_length", len(req.Password))
 
 	if req.Username == "" || req.Password == "" {
 		slog.WarnContext(ctx, "Add user failed - username and password are required")
@@ -70,11 +75,16 @@ func (s *Server) handleAddUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Don't return the password hash
-	newUser.PasswordHash = ""
+	slog.InfoContext(ctx, "User saved with password hash", "id", newUser.ID, "username", req.Username, "hash_length", len(newUser.PasswordHash))
+
+	// Return response without password hash
+	response := UserResponse{
+		ID:       newUser.ID,
+		Username: newUser.Username,
+	}
 	slog.InfoContext(ctx, "User added successfully", "id", newUser.ID, "username", req.Username)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newUser)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (s *Server) handleRemoveUser(w http.ResponseWriter, r *http.Request) {

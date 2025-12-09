@@ -7,7 +7,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/Gemini8532/gitwapp/internal/api"
 	"github.com/Gemini8532/gitwapp/pkg/models"
@@ -16,7 +18,7 @@ import (
 func getBaseURL() string {
 	port := os.Getenv("APP_PORT")
 	if port == "" {
-		port = "8080"
+		port = defaultPort
 	}
 	return fmt.Sprintf("http://localhost:%s/internal/api", port)
 }
@@ -30,17 +32,24 @@ func handleRepoCommand() {
 
 func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 	if len(args) < 3 {
-		return fmt.Errorf("Usage: gitwapp repo <add|remove|list> [args]")
+		printRepoHelp(out)
+		return nil
 	}
 
 	subCmd := args[2]
 	switch subCmd {
 	case "add":
 		if len(args) < 4 {
-			return fmt.Errorf("Usage: gitwapp repo add <path>")
+			printRepoHelp(out)
+			return nil
 		}
 		path := args[3]
-		reqBody, _ := json.Marshal(api.AddRepoRequest{Path: path})
+		// Expand to absolute path
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("invalid path: %w", err)
+		}
+		reqBody, _ := json.Marshal(api.AddRepoRequest{Path: absPath})
 		resp, err := http.Post(baseURL+"/repos", "application/json", bytes.NewBuffer(reqBody))
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
@@ -48,10 +57,13 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 		return processResponse(resp, err, out)
 	case "remove":
 		if len(args) < 4 {
-			return fmt.Errorf("Usage: gitwapp repo remove <id>")
+			printRepoHelp(out)
+			return nil
 		}
 		id := args[3]
-		req, _ := http.NewRequest("DELETE", baseURL+"/repos/"+id, nil)
+		// URL encode the ID to handle special characters
+		encodedID := url.PathEscape(id)
+		req, _ := http.NewRequest("DELETE", baseURL+"/repos/"+encodedID, nil)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
@@ -72,12 +84,22 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 		if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
 			return fmt.Errorf("error decoding response: %v", err)
 		}
-		for _, r := range repos {
-			fmt.Fprintf(out, "%s\t%s\t%s\n", r.ID, r.Name, r.Path)
+		if len(repos) == 0 {
+			fmt.Fprintln(out, "No repositories tracked.")
+			fmt.Fprintln(out, "Use 'gitwapp repo add <path>' to add a repository.")
+		} else {
+			for _, r := range repos {
+				fmt.Fprintf(out, "%s\t%s\t%s\n", r.ID, r.Name, r.Path)
+			}
 		}
 		return nil
+	case "help", "-h", "--help":
+		printRepoHelp(out)
+		return nil
 	default:
-		return fmt.Errorf("Unknown repo command: %s", subCmd)
+		fmt.Fprintf(out, "Unknown repo command: %s\n\n", subCmd)
+		printRepoHelp(out)
+		return nil
 	}
 }
 
@@ -90,14 +112,16 @@ func handleUserCommand() {
 
 func runUserCommand(args []string, baseURL string, out io.Writer) error {
 	if len(args) < 3 {
-		return fmt.Errorf("Usage: gitwapp user <add|remove|passwd> [args]")
+		printUserHelp(out)
+		return nil
 	}
 
 	subCmd := args[2]
 	switch subCmd {
 	case "add":
 		if len(args) < 5 {
-			return fmt.Errorf("Usage: gitwapp user add <username> <password>")
+			printUserHelp(out)
+			return nil
 		}
 		username := args[3]
 		password := args[4]
@@ -106,17 +130,48 @@ func runUserCommand(args []string, baseURL string, out io.Writer) error {
 		return processResponse(resp, err, out)
 	case "remove":
 		if len(args) < 4 {
-			return fmt.Errorf("Usage: gitwapp user remove <id>")
+			printUserHelp(out)
+			return nil
 		}
 		id := args[3]
-		req, _ := http.NewRequest("DELETE", baseURL+"/users/"+id, nil)
+		encodedID := url.PathEscape(id)
+		req, _ := http.NewRequest("DELETE", baseURL+"/users/"+encodedID, nil)
 		resp, err := http.DefaultClient.Do(req)
 		return processResponse(resp, err, out)
 	case "passwd":
 		fmt.Fprintln(out, "passwd command not implemented yet")
 		return nil
+	case "list":
+		resp, err := http.Get(baseURL + "/users")
+		if err != nil {
+			return fmt.Errorf("failed to connect to server: %w", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			fmt.Fprintf(out, "Error: Server returned %s\n", resp.Status)
+			io.Copy(out, resp.Body)
+			return fmt.Errorf("server error: %s", resp.Status)
+		}
+		var users []models.User
+		if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+			return fmt.Errorf("error decoding response: %v", err)
+		}
+		if len(users) == 0 {
+			fmt.Fprintln(out, "No users found.")
+			fmt.Fprintln(out, "Use 'gitwapp user add <username> <password>' to create a user.")
+		} else {
+			for _, u := range users {
+				fmt.Fprintf(out, "%s\t%s\n", u.ID, u.Username)
+			}
+		}
+		return nil
+	case "help", "-h", "--help":
+		printUserHelp(out)
+		return nil
 	default:
-		return fmt.Errorf("Unknown user command: %s", subCmd)
+		fmt.Fprintf(out, "Unknown user command: %s\n\n", subCmd)
+		printUserHelp(out)
+		return nil
 	}
 }
 
@@ -137,4 +192,25 @@ func processResponse(resp *http.Response, err error, out io.Writer) error {
 		fmt.Fprintln(out)
 	}
 	return nil
+}
+
+func printRepoHelp(out io.Writer) {
+	fmt.Fprintln(out, "Usage: gitwapp repo <command> [args]")
+	fmt.Fprintln(out, "")
+	fmt.Fprintln(out, "Commands:")
+	fmt.Fprintln(out, "  add <path>    Add a repository to track")
+	fmt.Fprintln(out, "  remove <id>   Remove a repository from tracking")
+	fmt.Fprintln(out, "  list          List all tracked repositories")
+	fmt.Fprintln(out, "  help          Show this help message")
+}
+
+func printUserHelp(out io.Writer) {
+	fmt.Fprintln(out, "Usage: gitwapp user <command> [args]")
+	fmt.Fprintln(out, "")
+	fmt.Fprintln(out, "Commands:")
+	fmt.Fprintln(out, "  add <username> <password>   Create a new user")
+	fmt.Fprintln(out, "  remove <id>                 Delete a user")
+	fmt.Fprintln(out, "  list                        List all users")
+	fmt.Fprintln(out, "  passwd <username>           Update user password (not implemented)")
+	fmt.Fprintln(out, "  help                        Show this help message")
 }

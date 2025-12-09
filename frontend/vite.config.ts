@@ -17,11 +17,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-      '/internal/api': {
-        target: 'http://localhost:8080',
+        target: `http://localhost:${process.env.APP_PORT || '8084'}`,
         changeOrigin: true,
       },
     }

@@ -12,15 +12,13 @@ import (
 
 	"github.com/Gemini8532/gitwapp/internal/api"
 	"github.com/Gemini8532/gitwapp/internal/config"
-	"github.com/joho/godotenv"
 )
 
-func main() {
-	// Load .env file if it exists
-	if err := godotenv.Load(); err != nil {
-		// It's okay if .env doesn't exist, we'll rely on defaults or env vars
-	}
+// Default port - can be overridden at build time with:
+// go build -ldflags "-X main.defaultPort=8084"
+var defaultPort = "8080"
 
+func main() {
 	// Initialize logger ONCE based on environment
 	logger := initLogger()
 	slog.SetDefault(logger)
@@ -59,14 +57,14 @@ func initLogger() *slog.Logger {
 
 func runServer() {
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
-	port := serveCmd.String("port", "8080", "Port to listen on")
+	port := serveCmd.String("port", defaultPort, "Port to listen on")
 
-	// Allow overriding port from env
+	serveCmd.Parse(os.Args[2:])
+
+	// Allow overriding port from environment variable (after flag parsing)
 	if envPort := os.Getenv("APP_PORT"); envPort != "" {
 		*port = envPort
 	}
-
-	serveCmd.Parse(os.Args[2:])
 
 	store, err := config.NewStore()
 	if err != nil {
@@ -79,8 +77,6 @@ func runServer() {
 	}
 
 	server := api.NewServer(store)
-	slog.Info("Starting server", "port", *port)
-
 	if err := server.Start(*port); err != nil {
 		slog.Error("Server failed to start", "error", err)
 		os.Exit(1)

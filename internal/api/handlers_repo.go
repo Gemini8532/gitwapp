@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Gemini8532/gitwapp/pkg/models"
@@ -48,6 +49,13 @@ func (s *Server) handleAddRepo(w http.ResponseWriter, r *http.Request) {
 	if req.Path == "" {
 		slog.WarnContext(ctx, "Add repository failed - path is required")
 		http.Error(w, "Path is required", http.StatusBadRequest)
+		return
+	}
+
+	// Require absolute path
+	if !filepath.IsAbs(req.Path) {
+		slog.WarnContext(ctx, "Add repository failed - path must be absolute", "path", req.Path)
+		http.Error(w, "Path must be absolute", http.StatusBadRequest)
 		return
 	}
 
