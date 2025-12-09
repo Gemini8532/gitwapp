@@ -1,0 +1,12 @@
+[
+  {
+    "id": "a2c618d3-63dc-40b8-b1fc-53145ce2acc4",
+    "username": "admin",
+    "password_hash": "$2a$10$EpGmcb30kjJ2m7NYyl/94.F5dTJg5.mu1wVpkxf.0vuChn1fM.nzW"
+  },
+  {
+    "id": "a39b7fbe-7bff-4e64-97ea-3b45e12deda1",
+    "username": "admin2",
+    "password_hash": "$2a$10$iyG3OMzClYrYcWixjljpVuvnRFG7.YlJQ5XYDCNTxWYcVDcx1qMfC"
+  }
+]
