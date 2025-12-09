@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { ArrowUp, ArrowDown, Plus, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, Plus, Minus, Check } from 'lucide-react';
 import clsx from 'clsx';
 
 interface GitStatus {
@@ -32,6 +32,11 @@ export const RepoDetail: React.FC = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
   });
 
+  const unstageMutation = useMutation({
+    mutationFn: (file: string) => api.post(`/repos/${id}/unstage`, { file }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+  });
+
   const commitMutation = useMutation({
     mutationFn: (message: string) => api.post(`/repos/${id}/commit`, { message }),
     onSuccess: () => {
@@ -53,6 +58,9 @@ export const RepoDetail: React.FC = () => {
   if (isLoading) return <div>Loading status...</div>;
   if (error) return <div className="text-red-500">Error loading status</div>;
   if (!status) return <div>No status available</div>;
+
+  // Helper to check if file is staged (Staging status is not 0 or 32 means added)
+  const isStaged = (stat: any) => stat.Staging !== 0 && stat.Staging !== 32;
 
   return (
     <div className="space-y-6">
@@ -96,23 +104,25 @@ export const RepoDetail: React.FC = () => {
           <h2 className="font-semibold mb-4">Changes</h2>
           {!status.Clean && status.Worktree ? (
             <ul className="space-y-2">
-              {Object.entries(status.Worktree).map(([file, stat]: [string, any]) => (
-                stat.Staging === 1 ? null : ( // 1 usually means Unmodified in go-git if strictly typed, but here it's serialized JSON. 
-                  // Actually go-git Status is a map. '?' means untracked etc.
-                  // We need to verify what the API actually sends for "Worktree".
-                  // For now, listing all keys in Status map.
+              {Object.entries(status.Worktree).map(([file, stat]: [string, any]) => {
+                const staged = isStaged(stat);
+                return (
                   <li key={file} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                    <span className="truncate">{file}</span>
+                    <span className="truncate flex items-center gap-2">
+                      {staged && <span className="text-green-600 text-xs">●</span>}
+                      {file}
+                    </span>
                     <button
-                      onClick={() => stageMutation.mutate(file)}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded text-blue-600"
-                      title="Stage"
+                      onClick={() => staged ? unstageMutation.mutate(file) : stageMutation.mutate(file)}
+                      className={clsx("p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded",
+                        staged ? "text-red-600" : "text-blue-600")}
+                      title={staged ? "Unstage" : "Stage"}
                     >
-                      <Plus className="w-4 h-4" />
+                      {staged ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     </button>
                   </li>
-                )
-              ))}
+                );
+              })}
             </ul>
           ) : <p className="text-gray-500 text-sm">No changes.</p>}
         </div>

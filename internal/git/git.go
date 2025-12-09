@@ -1,10 +1,19 @@
 package git
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 )
 
 // Status represents the high-level status of a repository
@@ -90,6 +99,14 @@ func StageFile(path string, file string) error {
 	return err
 }
 
+func UnstageFile(path string, file string) error {
+	// go-git doesn't have a clean API for unstaging a single file
+	// Use git command directly for reliability
+	cmd := exec.Command("git", "reset", "HEAD", "--", file)
+	cmd.Dir = path
+	return cmd.Run()
+}
+
 func Commit(path string, msg string) error {
 	r, err := git.PlainOpen(path)
 	if err != nil {
@@ -109,8 +126,14 @@ func Push(path string) error {
 		return err
 	}
 
-	// For MVP, we assume using SSH keys from the system or standard config
-	return r.Push(&git.PushOptions{})
+	auth, err := getAuth(path)
+	if err != nil {
+		return fmt.Errorf("failed to get auth: %w", err)
+	}
+
+	return r.Push(&git.PushOptions{
+		Auth: auth,
+	})
 }
 
 func Pull(path string) error {
@@ -124,9 +147,105 @@ func Pull(path string) error {
 		return err
 	}
 
+	auth, err := getAuth(path)
+	if err != nil {
+		return fmt.Errorf("failed to get auth: %w", err)
+	}
+
 	return w.Pull(&git.PullOptions{
 		RemoteName: "origin",
+		Auth:       auth,
 	})
+}
+
+// getSSHAuth attempts to get SSH authentication using ssh-agent or key files
+func getSSHAuth() (transport.AuthMethod, error) {
+	// Try ssh-agent first (most common and secure)
+	auth, err := ssh.NewSSHAgentAuth("git")
+	if err == nil {
+		return auth, nil
+	}
+
+	// Fallback: try common SSH key locations
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	keyPaths := []string{
+		filepath.Join(homeDir, ".ssh", "id_ed25519"),
+		filepath.Join(homeDir, ".ssh", "id_rsa"),
+		filepath.Join(homeDir, ".ssh", "id_ecdsa"),
+	}
+
+	for _, keyPath := range keyPaths {
+		auth, err := ssh.NewPublicKeysFromFile("git", keyPath, "")
+		if err == nil {
+			return auth, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no SSH authentication method available")
+}
+
+// getAuth gets appropriate authentication based on remote URL
+func getAuth(repoPath string) (transport.AuthMethod, error) {
+	r, err := git.PlainOpen(repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the remote URL to determine auth type
+	remote, err := r.Remote("origin")
+	if err != nil {
+		return nil, err
+	}
+
+	if len(remote.Config().URLs) == 0 {
+		return nil, fmt.Errorf("no remote URL configured")
+	}
+
+	remoteURL := remote.Config().URLs[0]
+
+	// Check if it's SSH or HTTPS
+	if strings.HasPrefix(remoteURL, "git@") || strings.HasPrefix(remoteURL, "ssh://") {
+		return getSSHAuth()
+	}
+
+	// For HTTPS, use git credential helper
+	return getHTTPSAuth(remoteURL)
+}
+
+// getHTTPSAuth gets credentials from git credential helper
+func getHTTPSAuth(remoteURL string) (transport.AuthMethod, error) {
+	// Use git credential fill to get credentials
+	cmd := exec.Command("git", "credential", "fill")
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("protocol=https\nhost=github.com\npath=%s\n\n", remoteURL))
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get credentials: %w", err)
+	}
+
+	// Parse the output
+	var username, password string
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "username=") {
+			username = strings.TrimPrefix(line, "username=")
+		} else if strings.HasPrefix(line, "password=") {
+			password = strings.TrimPrefix(line, "password=")
+		}
+	}
+
+	if username == "" || password == "" {
+		return nil, fmt.Errorf("no credentials found")
+	}
+
+	return &http.BasicAuth{
+		Username: username,
+		Password: password,
+	}, nil
 }
 
 // countCommitsBetween counts how many commits are in 'from' that are not in 'to'

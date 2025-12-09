@@ -94,6 +94,38 @@ func (s *Server) handleStage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (s *Server) handleUnstage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	var req StageRequest // Reuse same request struct
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		slog.ErrorContext(ctx, "Failed to decode unstage request", "id", id, "error", err)
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	slog.InfoContext(ctx, "Unstaging file", "id", id, "file", req.File)
+
+	repo, err := s.getRepoByID(id)
+	if err != nil {
+		slog.WarnContext(ctx, "Unstage file failed - repository not found", "id", id, "file", req.File)
+		http.Error(w, "Repository not found", http.StatusNotFound)
+		return
+	}
+
+	if err := git.UnstageFile(repo.Path, req.File); err != nil {
+		slog.ErrorContext(ctx, "Unstage file failed", "id", id, "file", req.File, "path", repo.Path, "error", err)
+		http.Error(w, "Failed to unstage file: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	slog.InfoContext(ctx, "File unstaged successfully", "id", id, "file", req.File, "path", repo.Path)
+	w.WriteHeader(http.StatusOK)
+}
+
 // Public API: Commit
 type CommitRequest struct {
 	Message string `json:"message"`
