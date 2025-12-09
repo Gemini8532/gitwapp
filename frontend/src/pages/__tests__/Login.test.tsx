@@ -1,25 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Login } from '../Login';
 import { AuthProvider } from '../../context/AuthContext';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../mocks/server';
-
-// Helper to render with providers
-const renderLogin = () => {
-  return render(
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<div>Dashboard</div>} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
-};
 
 // Since we are not navigating *to* /login in the test but rendering it directly inside router,
 // we need to ensure the initial entry is correct if we want to test navigation *away* from it.
