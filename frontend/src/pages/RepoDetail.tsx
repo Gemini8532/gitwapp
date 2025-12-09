@@ -126,7 +126,7 @@ export const RepoDetail: React.FC = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => stageAllMutation.mutate()}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-blue-600 disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
                 title="Stage All"
                 disabled={stageAllMutation.isPending || !hasStageable}
               >
@@ -134,7 +134,7 @@ export const RepoDetail: React.FC = () => {
               </button>
               <button
                 onClick={() => unstageAllMutation.mutate()}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-red-600 disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
                 title="Unstage All"
                 disabled={unstageAllMutation.isPending || !hasUnstageable}
               >
