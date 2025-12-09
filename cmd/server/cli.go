@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -22,7 +23,7 @@ func getBaseURL() string {
 
 func handleRepoCommand() {
 	if err := runRepoCommand(os.Args, getBaseURL(), os.Stdout); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		slog.Error("Error executing repo command", "error", err)
 		os.Exit(1)
 	}
 }
@@ -41,6 +42,9 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 		path := args[3]
 		reqBody, _ := json.Marshal(api.AddRepoRequest{Path: path})
 		resp, err := http.Post(baseURL+"/repos", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			return fmt.Errorf("failed to connect to server: %w", err)
+		}
 		return processResponse(resp, err, out)
 	case "remove":
 		if len(args) < 4 {
@@ -49,17 +53,20 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 		id := args[3]
 		req, _ := http.NewRequest("DELETE", baseURL+"/repos/"+id, nil)
 		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to connect to server: %w", err)
+		}
 		return processResponse(resp, err, out)
 	case "list":
 		resp, err := http.Get(baseURL + "/repos")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to connect to server: %w", err)
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			fmt.Fprintf(out, "Error: Server returned %s\n", resp.Status)
 			io.Copy(out, resp.Body)
-			return fmt.Errorf("server error")
+			return fmt.Errorf("server error: %s", resp.Status)
 		}
 		var repos []models.Repository
 		if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
@@ -76,7 +83,7 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 
 func handleUserCommand() {
 	if err := runUserCommand(os.Args, getBaseURL(), os.Stdout); err != nil {
-		fmt.Printf("Error: %v\n", err)
+		slog.Error("Error executing user command", "error", err)
 		os.Exit(1)
 	}
 }

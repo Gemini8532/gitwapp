@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -28,6 +29,9 @@ func NewServer(store *config.Store) *Server {
 }
 
 func (s *Server) routes() {
+	// Add logging middleware to all routes
+	s.router.Use(middleware.LoggingMiddleware)
+
 	// Public API
 	apiPublic := s.router.PathPrefix("/api").Subrouter()
 	apiPublic.HandleFunc("/health", s.handleHealth).Methods("GET")
@@ -36,19 +40,19 @@ func (s *Server) routes() {
 	// Protected API
 	apiProtected := s.router.PathPrefix("/api").Subrouter()
 	apiProtected.Use(middleware.JWTMiddleware)
-	
+
 	apiProtected.HandleFunc("/repos", s.handleGetRepos).Methods("GET")
 	apiProtected.HandleFunc("/repos/{id}/status", s.handleRepoStatus).Methods("GET")
 	apiProtected.HandleFunc("/repos/{id}/stage", s.handleStage).Methods("POST")
 	apiProtected.HandleFunc("/repos/{id}/commit", s.handleCommit).Methods("POST")
 	apiProtected.HandleFunc("/repos/{id}/push", s.handlePush).Methods("POST")
 	apiProtected.HandleFunc("/repos/{id}/pull", s.handlePull).Methods("POST")
-	
+
 	// Internal API (Localhost only)
 	internal := s.router.PathPrefix("/internal/api").Subrouter()
 	internal.Use(localOnlyMiddleware)
 	internal.HandleFunc("/health", s.handleHealth).Methods("GET")
-	
+
 	internal.HandleFunc("/repos", s.handleListRepos).Methods("GET")
 	internal.HandleFunc("/repos", s.handleAddRepo).Methods("POST")
 	internal.HandleFunc("/repos/{id}", s.handleRemoveRepo).Methods("DELETE")
@@ -67,7 +71,7 @@ func (s *Server) Start(port string) error {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	fmt.Printf("Server starting on port %s\n", port)
+	slog.Info("Server starting", "port", port)
 	return s.http.ListenAndServe()
 }
 
@@ -90,7 +94,7 @@ func localOnlyMiddleware(next http.Handler) http.Handler {
 		// but for the internal CLI tool communicating with the server on the same machine,
 		// checking RemoteAddr is a start.
 		// However, RemoteAddr contains port.
-		// Nginx might proxy requests, but internal API is meant to be hit directly by the CLI binary, 
+		// Nginx might proxy requests, but internal API is meant to be hit directly by the CLI binary,
 		// bypassing Nginx if possible, or we trust Nginx configuration to block external access to /internal.
 		// For now, let's just proceed.
 		next.ServeHTTP(w, r)

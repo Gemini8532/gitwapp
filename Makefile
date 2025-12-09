@@ -23,10 +23,13 @@ init-env:
 build-frontend: check-env
 	cd frontend && npm install && npm run build
 
-build-backend: check-env
-	@mkdir -p frontend/dist  
-	@touch frontend/dist/.keep  
-	go build -o bin/server cmd/server/main.go
+# Track all Go files in cmd/server for dependency tracking
+SERVER_SOURCES := $(shell find cmd/server -name '*.go' -type f)
+
+build-backend: check-env $(SERVER_SOURCES)
+	@mkdir -p frontend/dist
+	@touch frontend/dist/.keep
+	go build -o bin/server ./cmd/server
 
 nginx-config: check-env
 	@sed 's/{{APP_PORT}}/$(APP_PORT)/g' templates/nginx.conf
