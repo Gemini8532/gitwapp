@@ -126,6 +126,86 @@ func (s *Server) handleUnstage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (s *Server) handleStageAll(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	slog.InfoContext(ctx, "Staging all files", "id", id)
+
+	repo, err := s.getRepoByID(id)
+	if err != nil {
+		slog.WarnContext(ctx, "Stage all failed - repository not found", "id", id)
+		http.Error(w, "Repository not found", http.StatusNotFound)
+		return
+	}
+
+	if err := git.StageAll(repo.Path); err != nil {
+		slog.ErrorContext(ctx, "Stage all failed", "id", id, "path", repo.Path, "error", err)
+		http.Error(w, "Failed to stage files: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	slog.InfoContext(ctx, "All files staged successfully", "id", id, "path", repo.Path)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleUnstageAll(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	slog.InfoContext(ctx, "Unstaging all files", "id", id)
+
+	repo, err := s.getRepoByID(id)
+	if err != nil {
+		slog.WarnContext(ctx, "Unstage all failed - repository not found", "id", id)
+		http.Error(w, "Repository not found", http.StatusNotFound)
+		return
+	}
+
+	if err := git.UnstageAll(repo.Path); err != nil {
+		slog.ErrorContext(ctx, "Unstage all failed", "id", id, "path", repo.Path, "error", err)
+		http.Error(w, "Failed to unstage files: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	slog.InfoContext(ctx, "All files unstaged successfully", "id", id, "path", repo.Path)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleGetDiff(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	vars := mux.Vars(r)
+	id := vars["id"]
+	file := r.URL.Query().Get("file")
+
+	if file == "" {
+		http.Error(w, "File parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	slog.InfoContext(ctx, "Getting file diff", "id", id, "file", file)
+
+	repo, err := s.getRepoByID(id)
+	if err != nil {
+		slog.WarnContext(ctx, "Get diff failed - repository not found", "id", id)
+		http.Error(w, "Repository not found", http.StatusNotFound)
+		return
+	}
+
+	diff, err := git.GetFileDiff(repo.Path, file)
+	if err != nil {
+		slog.ErrorContext(ctx, "Get diff failed", "id", id, "file", file, "path", repo.Path, "error", err)
+		http.Error(w, "Failed to get diff: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(diff))
+}
+
 // Public API: Commit
 type CommitRequest struct {
 	Message string `json:"message"`

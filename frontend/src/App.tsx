@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { RepoDetail } from './pages/RepoDetail';
+import { RepoDiff } from './pages/RepoDiff';
 import { Layout } from './components/Layout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="repos/:id" element={<RepoDetail />} />
+            <Route path="repos/:id/diff" element={<RepoDiff />} />
           </Route>
         </Routes>
       </AuthProvider>

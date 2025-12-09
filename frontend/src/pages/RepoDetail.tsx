@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { ArrowUp, ArrowDown, Plus, Minus, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, Plus, Minus, Check, FileDiff } from 'lucide-react';
 import clsx from 'clsx';
 
 interface GitStatus {
@@ -15,6 +15,7 @@ interface GitStatus {
 
 export const RepoDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [commitMessage, setCommitMessage] = useState('');
 
@@ -34,6 +35,16 @@ export const RepoDetail: React.FC = () => {
 
   const unstageMutation = useMutation({
     mutationFn: (file: string) => api.post(`/repos/${id}/unstage`, { file }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+  });
+
+  const stageAllMutation = useMutation({
+    mutationFn: () => api.post(`/repos/${id}/stage-all`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+  });
+
+  const unstageAllMutation = useMutation({
+    mutationFn: () => api.post(`/repos/${id}/unstage-all`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
   });
 
@@ -59,8 +70,18 @@ export const RepoDetail: React.FC = () => {
   if (error) return <div className="text-red-500">Error loading status</div>;
   if (!status) return <div>No status available</div>;
 
-  // Helper to check if file is staged (Staging status is not 0 or 32 means added)
-  const isStaged = (stat: any) => stat.Staging !== 0 && stat.Staging !== 32;
+  // Helper to check if file is staged (Staging status is not 0, 32-' ', or 63-'?')
+  const isStaged = (stat: any) => stat.Staging !== 0 && stat.Staging !== 32 && stat.Staging !== 63;
+
+  const handleDiffClick = (file: string) => {
+    navigate(`/repos/${id}/diff?file=${encodeURIComponent(file)}`);
+  };
+
+  const allFiles = status.Worktree ? Object.entries(status.Worktree) : [];
+  // Check if any file has changes in Worktree (not Unmodified-32 or 0)
+  const hasStageable = allFiles.some(([_, stat]: [string, any]) => stat.Worktree !== 32 && stat.Worktree !== 0);
+  // Check if any file is Staged
+  const hasUnstageable = allFiles.some(([_, stat]: [string, any]) => isStaged(stat));
 
   return (
     <div className="space-y-6">
@@ -98,28 +119,73 @@ export const RepoDetail: React.FC = () => {
 
       {/* Changes / Staging */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Working Directory (Simplified view - assuming API returns file list in Worktree or similar, 
-             currently our API returns go-git Status object which is map[string]FileStatus) */}
+        {/* Working Directory */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="font-semibold mb-4">Changes</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Changes</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => stageAllMutation.mutate()}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Stage All"
+                disabled={stageAllMutation.isPending || !hasStageable}
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => unstageAllMutation.mutate()}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Unstage All"
+                disabled={unstageAllMutation.isPending || !hasUnstageable}
+              >
+                <Minus className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
           {!status.Clean && status.Worktree ? (
             <ul className="space-y-2">
               {Object.entries(status.Worktree).map(([file, stat]: [string, any]) => {
                 const staged = isStaged(stat);
+                // Untracked files (status code 63 / '?') don't have git history for diffs
+                const isUntracked = stat.Worktree === 63 || stat.Staging === 63;
+
                 return (
                   <li key={file} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                    <span className="truncate flex items-center gap-2">
+                    <span
+                      className={clsx(
+                        "truncate flex items-center gap-2",
+                        !isUntracked && "cursor-pointer hover:underline"
+                      )}
+                      onClick={() => !isUntracked && handleDiffClick(file)}
+                      title={isUntracked ? "Untracked file" : "View Diff"}
+                    >
                       {staged && <span className="text-green-600 text-xs">●</span>}
+                      {isUntracked && <span className="text-gray-400 text-xs text-[10px] border border-gray-300 dark:border-gray-600 px-1 rounded">NEW</span>}
                       {file}
                     </span>
-                    <button
-                      onClick={() => staged ? unstageMutation.mutate(file) : stageMutation.mutate(file)}
-                      className={clsx("p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded",
-                        staged ? "text-red-600" : "text-blue-600")}
-                      title={staged ? "Unstage" : "Stage"}
-                    >
-                      {staged ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleDiffClick(file)}
+                        disabled={isUntracked}
+                        className={clsx(
+                          "p-1 rounded",
+                          isUntracked
+                            ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                            : "hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300"
+                        )}
+                        title={isUntracked ? "Diff unavailable for new files" : "View Diff"}
+                      >
+                        <FileDiff className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => staged ? unstageMutation.mutate(file) : stageMutation.mutate(file)}
+                        className={clsx("p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded",
+                          staged ? "text-red-600" : "text-blue-600")}
+                        title={staged ? "Unstage" : "Stage"}
+                      >
+                        {staged ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </li>
                 );
               })}

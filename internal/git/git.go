@@ -107,6 +107,29 @@ func UnstageFile(path string, file string) error {
 	return cmd.Run()
 }
 
+func StageAll(path string) error {
+	cmd := exec.Command("git", "add", "-A")
+	cmd.Dir = path
+	return cmd.Run()
+}
+
+func UnstageAll(path string) error {
+	cmd := exec.Command("git", "reset")
+	cmd.Dir = path
+	return cmd.Run()
+}
+
+func GetFileDiff(path string, file string) (string, error) {
+	// Get unified diff for the file
+	cmd := exec.Command("git", "diff", "HEAD", "--", file)
+	cmd.Dir = path
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
+
 func Commit(path string, msg string) error {
 	r, err := git.PlainOpen(path)
 	if err != nil {

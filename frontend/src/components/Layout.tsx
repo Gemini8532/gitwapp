@@ -1,16 +1,19 @@
 import React from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Github } from 'lucide-react';
 
 export const Layout: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const isDiffView = location.pathname.endsWith('/diff');
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -33,7 +36,7 @@ export const Layout: React.FC = () => {
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className={`mx-auto py-6 sm:px-6 lg:px-8 ${isDiffView ? 'max-w-[100vw] px-0' : 'max-w-7xl'}`}>
         <Outlet />
       </main>
     </div>
