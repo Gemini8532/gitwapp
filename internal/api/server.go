@@ -13,12 +13,15 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// BuildInfo holds the build-time information of the application.
 type BuildInfo struct {
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
 	GitCommit string `json:"git_commit"`
 }
 
+// Server is the main application server. It holds the router,
+// configuration store, and other server-related components.
 type Server struct {
 	router    *mux.Router
 	store     *config.Store
@@ -26,6 +29,7 @@ type Server struct {
 	buildInfo BuildInfo
 }
 
+// NewServer creates a new instance of the Server.
 func NewServer(store *config.Store, buildInfo ...BuildInfo) *Server {
 	r := mux.NewRouter()
 
@@ -44,6 +48,7 @@ func NewServer(store *config.Store, buildInfo ...BuildInfo) *Server {
 	return s
 }
 
+// routes sets up all the API routes for the server.
 func (s *Server) routes() {
 	// Add logging middleware to all routes
 	s.router.Use(middleware.LoggingMiddleware)
@@ -98,6 +103,7 @@ func (s *Server) routes() {
 	internal.HandleFunc("/users/{id}", s.handleRemoveUser).Methods("DELETE")
 }
 
+// Start starts the HTTP server on the specified port.
 func (s *Server) Start(port string) error {
 	addr := fmt.Sprintf(":%s", port)
 	s.http = &http.Server{
@@ -111,24 +117,29 @@ func (s *Server) Start(port string) error {
 	return s.http.ListenAndServe()
 }
 
+// Shutdown gracefully shuts down the HTTP server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	return s.http.Shutdown(ctx)
 }
 
+// Handler returns the underlying HTTP handler of the server.
 func (s *Server) Handler() http.Handler {
 	return s.router
 }
 
+// handleHealth is a simple health check endpoint.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
+// handleInfo returns the build information of the application.
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(s.buildInfo)
 }
 
+// localOnlyMiddleware is a middleware that restricts access to localhost.
 func localOnlyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Basic check for localhost. In production behind nginx, this might need refinement

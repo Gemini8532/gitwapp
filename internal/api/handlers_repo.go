@@ -13,11 +13,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// AddRepoRequest defines the structure for a request to add a new repository.
 type AddRepoRequest struct {
 	Path string `json:"path"`
 	Name string `json:"name"` // Optional, default to base of path
 }
 
+// handleListRepos handles the API request to list all tracked repositories.
 func (s *Server) handleListRepos(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -34,6 +36,7 @@ func (s *Server) handleListRepos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(repos)
 }
 
+// handleAddRepo handles the API request to add a new repository to be tracked.
 func (s *Server) handleAddRepo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -119,6 +122,7 @@ func (s *Server) handleAddRepo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(newRepo)
 }
 
+// handleRemoveRepo handles the API request to remove a tracked repository.
 func (s *Server) handleRemoveRepo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

@@ -11,16 +11,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// AddUserRequest defines the structure for a request to add a new user.
 type AddUserRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// UserResponse defines the structure for a user-related API response.
+// It omits sensitive information like the password hash.
 type UserResponse struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
 }
 
+// handleAddUser handles the API request to create a new user.
 func (s *Server) handleAddUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -87,6 +91,7 @@ func (s *Server) handleAddUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// handleRemoveUser handles the API request to delete a user.
 func (s *Server) handleRemoveUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -128,6 +133,8 @@ func (s *Server) handleRemoveUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// handleListUsers handles the API request to list all users.
+// The password hash is omitted from the response for security.
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

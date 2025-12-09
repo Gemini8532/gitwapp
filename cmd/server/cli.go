@@ -16,6 +16,9 @@ import (
 	"github.com/Gemini8532/gitwapp/pkg/models"
 )
 
+// getBaseURL constructs the base URL for the internal API based on the
+// configured port. It prioritizes the APP_PORT environment variable and
+// falls back to the default port.
 func getBaseURL() string {
 	port := os.Getenv("APP_PORT")
 	if port == "" {
@@ -24,6 +27,8 @@ func getBaseURL() string {
 	return fmt.Sprintf("http://localhost:%s/internal/api", port)
 }
 
+// handleRepoCommand is the entry point for the "repo" command. It parses
+// arguments and calls the appropriate function to handle the subcommand.
 func handleRepoCommand() {
 	if err := runRepoCommand(os.Args, getBaseURL(), os.Stdout); err != nil {
 		slog.Error("Error executing repo command", "error", err)
@@ -31,6 +36,7 @@ func handleRepoCommand() {
 	}
 }
 
+// runRepoCommand executes the repository-related subcommands (add, remove, list).
 func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 	if len(args) < 3 {
 		printRepoHelp(out)
@@ -108,6 +114,7 @@ func runRepoCommand(args []string, baseURL string, out io.Writer) error {
 	}
 }
 
+// handleUserCommand is the entry point for the "user" command.
 func handleUserCommand() {
 	if err := runUserCommand(os.Args, getBaseURL(), os.Stdout); err != nil {
 		slog.Error("Error executing user command", "error", err)
@@ -115,6 +122,7 @@ func handleUserCommand() {
 	}
 }
 
+// runUserCommand executes the user-related subcommands (add, remove, list).
 func runUserCommand(args []string, baseURL string, out io.Writer) error {
 	if len(args) < 3 {
 		printUserHelp(out)
@@ -184,6 +192,9 @@ func runUserCommand(args []string, baseURL string, out io.Writer) error {
 	}
 }
 
+// processResponse handles the HTTP response from the API. It checks for
+// errors, and if the request was successful, prints "Success" to the
+// output.
 func processResponse(resp *http.Response, err error, out io.Writer) error {
 	if err != nil {
 		return err
@@ -203,6 +214,7 @@ func processResponse(resp *http.Response, err error, out io.Writer) error {
 	return nil
 }
 
+// printRepoHelp prints the help message for the "repo" command.
 func printRepoHelp(out io.Writer) {
 	fmt.Fprintln(out, "Usage: gitwapp repo <command> [args]")
 	fmt.Fprintln(out, "")
@@ -213,6 +225,7 @@ func printRepoHelp(out io.Writer) {
 	fmt.Fprintln(out, "  help          Show this help message")
 }
 
+// printUserHelp prints the help message for the "user" command.
 func printUserHelp(out io.Writer) {
 	fmt.Fprintln(out, "Usage: gitwapp user <command> [args]")
 	fmt.Fprintln(out, "")

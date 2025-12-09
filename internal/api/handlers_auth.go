@@ -1,3 +1,4 @@
+// Package api provides the HTTP server and API handlers for the GitWapp application.
 package api
 
 import (
@@ -9,15 +10,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// LoginRequest represents the request body for a user login.
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
+// LoginResponse represents the response body after a successful login.
 type LoginResponse struct {
 	Token string `json:"token"`
 }
 
+// handleLogin handles user authentication. It expects a JSON request body
+// with a username and password. On successful authentication, it returns a
+// JWT token in the response.
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
