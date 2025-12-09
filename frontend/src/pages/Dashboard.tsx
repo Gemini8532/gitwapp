@@ -96,7 +96,7 @@ export const Dashboard: React.FC = () => {
             >
               <div className="flex items-center space-x-3">
                 <FolderGit className="h-6 w-6 text-blue-500" />
-                <h3 className="text-lg font-medium truncate" title={repo.name}>{repo.name}</h3>
+                <h3 className="text-lg font-medium truncate" title={repo.name}>{shortenPath(repo.name)}</h3>
               </div>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 truncate" title={repo.path}>
                 {shortenPath(repo.path)}

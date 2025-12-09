@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { LogOut, Github } from 'lucide-react';
 
+import { shortenPath } from '../utils/pathUtils';
+
 interface Repo {
   id: string;
   name: string;
@@ -53,7 +55,7 @@ export const Layout: React.FC = () => {
                 <>
                   <span className="mx-3 text-gray-300 text-2xl font-light">/</span>
                   <span className="text-xl font-medium text-gray-700 dark:text-gray-200 truncate max-w-[200px] sm:max-w-md">
-                    {currentRepo.name}
+                    {shortenPath(currentRepo.name)}
                   </span>
                 </>
               )}
