@@ -10,6 +10,7 @@ import (
 
 	"github.com/Gemini8532/gitwapp/internal/config"
 	"github.com/Gemini8532/gitwapp/internal/middleware"
+	"github.com/Gemini8532/gitwapp/frontend"
 	"github.com/gorilla/mux"
 )
 
@@ -96,6 +97,31 @@ func (s *Server) routes() {
 	internal.HandleFunc("/users", s.handleListUsers).Methods("GET")
 	internal.HandleFunc("/users", s.handleAddUser).Methods("POST")
 	internal.HandleFunc("/users/{id}", s.handleRemoveUser).Methods("DELETE")
+
+	// Serve frontend static files
+	distFS, err := frontend.GetDistFS()
+	if err != nil {
+		slog.Error("Failed to load frontend assets", "error", err)
+	} else {
+		// SPA Handler: fallback to index.html for non-API routes
+		s.router.PathPrefix("/").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			if len(path) > 0 && path[0] == '/' {
+				path = path[1:]
+			}
+			if path == "" {
+				path = "index.html"
+			}
+
+			// Check if file exists in the embedded filesystem
+			if _, err := distFS.Open(path); err != nil {
+				// File not found, serve index.html (SPA fallback)
+				r.URL.Path = "/"
+			}
+
+			http.FileServer(http.FS(distFS)).ServeHTTP(w, r)
+		}))
+	}
 }
 
 func (s *Server) Start(port string) error {
