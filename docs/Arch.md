@@ -63,15 +63,21 @@ We use a monorepo-style structure. A `.env` file at the root acts as the single 
 ├── /templates             # Configuration templates
 │   ├── env                # Template for .env file
 │   └── nginx.conf         # Template for nginx config
+├── /test                  # Integration and E2E tests
+│   └── /e2e               # End-to-end tests for the backend API
 ├── Makefile               # Build automation  
 └── go.mod                 # Go module definition (at Root)
 ```
 
 ## 2. Environment Configuration
 
-The `.env` file in the project root contains stable configuration that is **checked into version control**. Both Vite (dev) and Go (dev/prod) will read this file.
+The application uses a specific precedence order for configuration, particularly for the server port:
 
-**Note:** The `.env` file is treated as stable configuration that is rarely changed. It is **not** gitignored and should be committed to the repository. This ensures consistent configuration across all environments.
+1.  **Environment Variable (`APP_PORT`)**: If set, this takes the highest precedence.
+2.  **Command Line Flag (`-port`)**: If passed to the binary (e.g., `./server serve -port 9090`), it overrides the default but is overridden by the env var.
+3.  **Default Port**: The fallback port (usually 8080) defined in `cmd/server/main.go`. This default can be modified at build time using `ldflags` (e.g., `-X main.defaultPort=8084`).
+
+The `.env` file in the project root is used to set these environment variables during development and standard deployment.
 
 **Template:** `templates/env`
 ```ini
@@ -114,11 +120,37 @@ make init-env PORT=3000 APP_NAME="My Custom App"
 
 ## 3. Frontend Development (Vite & Proxy)
 
-### A. Proxy Configuration
+### A. Configuration
 
-We configure Vite to load the environment variable from the root `.env` file to determine the proxy target.
+We use **Vite** with **React** and **TypeScript**. The configuration includes plugins for React and Tailwind CSS v4.
 
 **File:** `frontend/vite.config.ts`
+
+```typescript
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: `http://localhost:${process.env.APP_PORT || '8084'}`,
+        changeOrigin: true,
+      },
+    }
+  }
+})
+```
 
 ### B. Application Identity (Title & Favicon)
 
@@ -138,52 +170,59 @@ Since `//go:embed` cannot use relative paths like `../../`, we place a small Go 
 
 **File:** `frontend/embed.go`
 
+```go
+package frontend
+
+import (
+	"embed"
+	"io/fs"
+)
+
+//go:embed dist/*
+var dist embed.FS
+
+func GetDistFS() (fs.FS, error) {
+	return fs.Sub(dist, "dist")
+}
+```
+
 ### B. Server Implementation (With Structured Logging)
 
-We use `log/slog` for structured logging. We define the `AppName` as a constant here to serve as the single source of truth for directory naming.
+We use `log/slog` for structured logging. The logger is initialized once in `main.go` using `initLogger()` which switches handlers based on the environment:
+
+-   **Production (`APP_ENV=production`)**: Uses `slog.NewJSONHandler` for machine-readable JSON logs.
+-   **Development**: Uses `slog.NewTextHandler` for human-readable logs.
+
+We set this logger as the default using `slog.SetDefault(logger)`.
 
 **File:** `cmd/server/main.go`
+
+### C. Build Information
+
+Version information is injected into the binary at build time using `ldflags`. The variables `version`, `buildDate`, and `gitCommit` in `main.go` are populated during the build process to provide runtime versioning.
 
 ## 5. Production Build Strategy
 
 **Makefile:**
 
+The build process uses `ldflags` to inject versioning info and the default port configuration.
+
 ```makefile
-.PHONY: all build-frontend build-backend nginx-config init-env run-prod check-env
+# Build information
+VERSION ?= dev
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# Default values for .env generation
-PORT ?= 8080
-APP_NAME ?= "My Go App"
-
-# Load .env if it exists
-ifneq (,$(wildcard ./.env))  
-    include .env  
-    export  
-endif
-
-# Check that .env exists
-check-env:
-	@test -f .env || (echo "Error: .env file not found. Run 'make init-env' first." && exit 1)
-
-all: check-env build-frontend build-backend
-
-init-env:
-	@sed -e 's/{{PORT}}/$(PORT)/g' -e 's/{{APP_NAME}}/$(APP_NAME)/g' templates/env > .env
-	@echo "Generated .env with APP_PORT=$(PORT) and VITE_APP_NAME=$(APP_NAME)"
-
-build-frontend: check-env
-	cd frontend && npm install && npm run build
-
-build-backend: check-env
-	@mkdir -p frontend/dist  
-	@touch frontend/dist/.keep  
-	go build -o bin/server cmd/server/main.go
-
-nginx-config: check-env
-	@sed 's/{{APP_PORT}}/$(APP_PORT)/g' templates/nginx.conf
-
-run-prod: all  
-	./bin/server
+build-backend: check-env $(SERVER_SOURCES)
+	@mkdir -p bin
+	@mkdir -p frontend/dist
+	@touch frontend/dist/.keep
+	go build -ldflags "\
+		-X main.defaultPort=$(APP_PORT) \
+		-X main.version=$(VERSION) \
+		-X main.buildDate=$(BUILD_DATE) \
+		-X main.gitCommit=$(GIT_COMMIT)" \
+		-o bin/server ./cmd/server
 ```
 
 ## 6. Nginx Proxy (Production)
@@ -224,31 +263,13 @@ make nginx-config
 make nginx-config > /etc/nginx/sites-available/myapp
 ```
 
-**Example Output:**
-
-```nginx
-server {  
-    listen 80;  
-    server_name example.com;
-
-    location / {  
-        proxy_pass http://localhost:8080;   
-        proxy_http_version 1.1;  
-        proxy_set_header Upgrade $http_upgrade;  
-        proxy_set_header Connection 'upgrade';  
-        proxy_set_header Host $host;  
-        proxy_cache_bypass $http_upgrade;  
-    }  
-}
-```
-
 ## 7. Workflow Summary
 
 ### Development
 
-1. **Terminal 1 (Go):** `go run cmd/server/main.go`  
+1. **Terminal 1 (Go):** `go run cmd/server/main.go serve`
    * Logs format: `time=... level=INFO msg=http_request ...`  
-   * Data dir: `~/.config/my-web-app`  
+   * Data dir: `~/.config/gitwapp` (or similar)
 2. **Terminal 2 (React):** `npm run dev` (in `frontend/`)  
    * Reads `VITE_APP_NAME` for title.  
    * Proxies `/api` to `localhost:8080`.
@@ -275,7 +296,7 @@ The project uses Tailwind CSS v4.
 ### Build & Automation
 - **Makefile:** The `Makefile` handles the build process.
   - `make build-frontend`: Installs dependencies and builds the React app to `frontend/dist`.
-  - `make build-backend`: Compiles the Go binary to `bin/server`. It ensures `frontend/dist` exists (with a dummy file if needed) to satisfy `go:embed`.
+  - `make build-backend`: Compiles the Go binary to `bin/server` injecting `ldflags`. It ensures `frontend/dist` exists (with a dummy file if needed) to satisfy `go:embed`.
   - `make run-prod`: Builds both and runs the binary.
 - **Gitignore:** A root `.gitignore` is configured to exclude build artifacts like `bin/`, `frontend/dist/`, and `frontend/node_modules/`.
 
@@ -285,21 +306,24 @@ Use libraries from the standard library where possible. If a library is not avai
 - **Module Name:** `github.com/Gemini8532/genapp`
 - **Embedding:** `frontend/embed.go` allows the Go backend to serve the compiled frontend.
 
-
-
-
 ## 9. Testing Strategy
 
-### Frontend (Jest + React Testing Library)
-We use Jest for unit and integration testing of the React application.
+### Frontend (Vitest + React Testing Library + MSW)
+We use **Vitest** as the test runner, which is faster and integrates natively with Vite.
 
 **Dependencies:**
-- `jest`, `ts-jest`, `jest-environment-jsdom`
-- `@testing-library/react`, `@testing-library/dom`, `@testing-library/jest-dom`
+- `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`
+- `msw` (Mock Service Worker) for API mocking.
+- `jsdom` environment.
 
 **Configuration:**
-- `frontend/jest.config.ts`: Configures Jest to handle TypeScript and JSDOM.
-- `frontend/jest.setup.ts`: Imports `@testing-library/jest-dom` for custom matchers.
+- `frontend/vite.config.ts`: Contains the `test` configuration block for Vitest.
+- `frontend/src/setupTests.ts`: Global test setup (imports `jest-dom` matchers, sets up MSW server lifecycle).
+
+**Strategy:**
+- **Unit/Integration Tests:** Located in `__tests__` directories or alongside components (e.g., `ComponentName.test.tsx`).
+- **API Mocking:** We use MSW to intercept network requests during tests, ensuring frontend tests are decoupled from the backend.
+- **Testing Library:** We test user interactions and visible output rather than internal implementation details.
 
 **Running Tests:**
 ```bash
@@ -308,6 +332,9 @@ cd frontend && npm test
 
 ### Backend (Go Testing)
 Standard Go testing is used for the backend.
+
+- **Unit Tests:** Co-located with code (e.g., `handler_test.go`).
+- **E2E/Integration Tests:** Located in `test/e2e/`, these tests spin up a real HTTP server and test the full API flow against a temporary directory environment.
 
 **Running Tests:**
 ```bash
