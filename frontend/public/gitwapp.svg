@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 256 256"
+   version="1.1"
+   id="svg12"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs16" />
+  <!-- Background -->
+  <rect
+     x="16"
+     y="16"
+     width="224"
+     height="224"
+     rx="48"
+     ry="48"
+     fill="#ff8a3c"
+     id="rect2" />
+  <!-- Branch line -->
+  <path
+     d="m 80.001076,64.11969 c 31.999994,0 57.871714,16.212426 57.871714,48.21242 v 24 c 0,32 16,48 48,48"
+     fill="none"
+     stroke="#1565c0"
+     stroke-width="20"
+     stroke-linecap="round"
+     id="path4"
+     style="stroke-width:23;stroke-miterlimit:4;stroke-dasharray:none" />
+  <!-- Left node -->
+  <ellipse
+     fill="#ffffff"
+     stroke="#1565c0"
+     stroke-width="10"
+     id="circle6"
+     cy="64.013725"
+     cx="67.899147"
+     rx="19.999998"
+     ry="20" />
+  <!-- Middle node -->
+  <ellipse
+     cx="136.44139"
+     cy="119.64492"
+     fill="#ffffff"
+     stroke="#1565c0"
+     stroke-width="10"
+     id="circle8"
+     rx="20"
+     ry="20.000002" />
+  <!-- Right node -->
+  <ellipse
+     cx="194.99028"
+     cy="183.5869"
+     fill="#ffffff"
+     stroke="#1565c0"
+     stroke-width="10"
+     id="circle10"
+     rx="20.000002"
+     ry="20" />
+</svg>
