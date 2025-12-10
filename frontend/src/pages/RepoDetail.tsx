@@ -161,6 +161,12 @@ export const RepoDetail: React.FC = () => {
                 const staged = isStaged(stat);
                 // Untracked files (status code 63 / '?') don't have git history for diffs
                 const isUntracked = stat.Worktree === 63 || stat.Staging === 63;
+                // Deleted files (status code 68 / 'D')
+                const isDeleted = stat.Worktree === 68 || stat.Staging === 68;
+                // Modified files (status code 77 / 'M')
+                const isModified = stat.Worktree === 77;
+                // Unmerged files (status code 85 / 'U')
+                const isUnmerged = stat.Worktree === 85 || stat.Staging === 85;
 
                 return (
                   <li key={file} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-700 rounded">
@@ -171,6 +177,9 @@ export const RepoDetail: React.FC = () => {
                     >
                       {staged && <span className="text-green-600 text-xs">●</span>}
                       {isUntracked && <span className="text-gray-400 text-xs text-[10px] border border-gray-300 dark:border-gray-600 px-1 rounded">NEW</span>}
+                      {isDeleted && <span className="text-red-500 text-xs text-[10px] border border-red-300 dark:border-red-600 px-1 rounded">DEL</span>}
+                      {isModified && !staged && <span className="text-blue-500 text-xs text-[10px] border border-blue-300 dark:border-blue-600 px-1 rounded">MOD</span>}
+                      {isUnmerged && <span className="text-orange-500 text-xs text-[10px] border border-orange-300 dark:border-orange-600 px-1 rounded">UNMERGED</span>}
                       {file}
                     </span>
                     <div className="flex items-center gap-1">
