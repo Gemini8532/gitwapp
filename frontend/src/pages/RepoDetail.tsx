@@ -18,6 +18,7 @@ export const RepoDetail: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [commitMessage, setCommitMessage] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { data: status, isLoading, error } = useQuery<GitStatus>({
     queryKey: ['repo', id, 'status'],
@@ -28,42 +29,70 @@ export const RepoDetail: React.FC = () => {
     refetchInterval: 5000,
   });
 
+  const clearError = () => setErrorMsg(null);
+
   const stageMutation = useMutation({
     mutationFn: (file: string) => api.post(`/repos/${id}/stage`, { file }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+    onSuccess: () => {
+      clearError();
+      queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
+    },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   const unstageMutation = useMutation({
     mutationFn: (file: string) => api.post(`/repos/${id}/unstage`, { file }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+    onSuccess: () => {
+      clearError();
+      queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
+    },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   const stageAllMutation = useMutation({
     mutationFn: () => api.post(`/repos/${id}/stage-all`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+    onSuccess: () => {
+      clearError();
+      queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
+    },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   const unstageAllMutation = useMutation({
     mutationFn: () => api.post(`/repos/${id}/unstage-all`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+    onSuccess: () => {
+      clearError();
+      queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
+    },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   const commitMutation = useMutation({
     mutationFn: (message: string) => api.post(`/repos/${id}/commit`, { message }),
     onSuccess: () => {
+      clearError();
       setCommitMessage('');
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   const pushMutation = useMutation({
     mutationFn: () => api.post(`/repos/${id}/push`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+    onSuccess: () => {
+      clearError();
+      queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
+    },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   const pullMutation = useMutation({
     mutationFn: () => api.post(`/repos/${id}/pull`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] }),
+    onSuccess: () => {
+      clearError();
+      queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
+    },
+    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
   });
 
   if (isLoading) return <div>Loading status...</div>;
@@ -112,21 +141,24 @@ export const RepoDetail: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 mt-4 sm:mt-0">
-          <button
-            onClick={() => pullMutation.mutate()}
-            disabled={pullMutation.isPending || status.Behind === 0}
-            className="btn-secondary flex items-center gap-1"
-          >
-            <ArrowDown className="w-4 h-4" /> Pull
-          </button>
-          <button
-            onClick={() => pushMutation.mutate()}
-            disabled={pushMutation.isPending || status.Ahead === 0}
-            className="btn-primary flex items-center gap-1"
-          >
-            <ArrowUp className="w-4 h-4" /> Push
-          </button>
+        <div className="flex flex-col items-end gap-2">
+            {errorMsg && <div className="text-red-500 text-sm">{errorMsg}</div>}
+            <div className="flex gap-2 mt-4 sm:mt-0">
+              <button
+                onClick={() => pullMutation.mutate()}
+                disabled={pullMutation.isPending}
+                className="btn-secondary flex items-center gap-1"
+              >
+                <ArrowDown className="w-4 h-4" /> Pull
+              </button>
+              <button
+                onClick={() => pushMutation.mutate()}
+                disabled={pushMutation.isPending || status.Ahead === 0}
+                className="btn-primary flex items-center gap-1"
+              >
+                <ArrowUp className="w-4 h-4" /> Push
+              </button>
+            </div>
         </div>
       </div>
 

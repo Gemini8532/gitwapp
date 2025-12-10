@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/storer"
@@ -164,13 +165,23 @@ func Push(path string) error {
 		return err
 	}
 
+	head, err := r.Head()
+	if err != nil {
+		return fmt.Errorf("failed to get HEAD: %w", err)
+	}
+	branchName := head.Name().Short()
+
 	auth, err := getAuth(path)
 	if err != nil {
 		return fmt.Errorf("failed to get auth: %w", err)
 	}
 
+	// Explicitly push only the current branch
+	refSpec := fmt.Sprintf("refs/heads/%s:refs/heads/%s", branchName, branchName)
+
 	return r.Push(&git.PushOptions{
-		Auth: auth,
+		Auth:     auth,
+		RefSpecs: []config.RefSpec{config.RefSpec(refSpec)},
 	})
 }
 
