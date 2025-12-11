@@ -91,10 +91,32 @@ describe('Login Page', () => {
 
     // Expect error message
     await waitFor(() => {
-      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+      expect(screen.getByText(/Error: 401 Unauthorized/i)).toBeInTheDocument();
     });
     
     // Should still be on login page
     expect(screen.queryByText('Dashboard Page')).not.toBeInTheDocument();
+  });
+
+  it('displays backend error message on failed login', async () => {
+    const user = userEvent.setup();
+
+    // Mock failed login with message
+    server.use(
+      http.post('/api/login', () => {
+        return HttpResponse.json({ message: 'Custom Backend Error' }, { status: 400 });
+      })
+    );
+
+    renderLoginWithRouter();
+
+    await user.type(screen.getByLabelText(/username/i), 'wrong');
+    await user.type(screen.getByLabelText(/password/i), 'wrong');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    // Expect error message
+    await waitFor(() => {
+      expect(screen.getByText('Custom Backend Error')).toBeInTheDocument();
+    });
   });
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { getErrorMessage } from '../utils/errorUtils';
 
 export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -18,7 +19,7 @@ export const Login: React.FC = () => {
       login(response.data.token);
       navigate('/');
     } catch (err) {
-      setError('Invalid credentials');
+      setError(getErrorMessage(err, 'Invalid credentials'));
     }
   };
 

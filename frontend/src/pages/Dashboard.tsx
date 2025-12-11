@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { FolderGit, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 import clsx from 'clsx';
 import { shortenPath } from '../utils/pathUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface Repository {
   id: string;
@@ -61,7 +62,7 @@ export const Dashboard: React.FC = () => {
   };
 
   if (isLoading) return <div className="text-center py-10">Loading repositories...</div>;
-  if (error) return <div className="text-center py-10 text-red-500">Error loading repositories</div>;
+  if (error) return <div className="text-center py-10 text-red-500">Error loading repositories: {getErrorMessage(error)}</div>;
 
   const displayRepos: RepoWithStatus[] = reposWithStatus.data || repos?.map(r => ({ ...r })) || [];
 
