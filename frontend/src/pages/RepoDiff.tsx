@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ArrowLeft, FileDiff } from 'lucide-react';
 import { DiffViewer } from '../components/DiffViewer';
+import { getErrorMessage } from '../utils/errorUtils';
 
 export const RepoDiff: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -54,7 +55,7 @@ export const RepoDiff: React.FC = () => {
                         </div>
                     ) : error ? (
                         <div className="p-4 text-red-500 bg-red-50 dark:bg-red-900/10 rounded">
-                            Error loading diff: {(error as any).message}
+                            Error loading diff: {getErrorMessage(error)}
                         </div>
                     ) : (
                         <DiffViewer diffText={diffContent} />

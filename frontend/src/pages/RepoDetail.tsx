@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ArrowUp, ArrowDown, Plus, Minus, Check, FileDiff, ArrowLeft } from 'lucide-react';
 import clsx from 'clsx';
+import { getErrorMessage } from '../utils/errorUtils';
 
 interface GitStatus {
   Clean: boolean;
@@ -37,7 +38,7 @@ export const RepoDetail: React.FC = () => {
       clearError();
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   const unstageMutation = useMutation({
@@ -46,7 +47,7 @@ export const RepoDetail: React.FC = () => {
       clearError();
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   const stageAllMutation = useMutation({
@@ -55,7 +56,7 @@ export const RepoDetail: React.FC = () => {
       clearError();
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   const unstageAllMutation = useMutation({
@@ -64,7 +65,7 @@ export const RepoDetail: React.FC = () => {
       clearError();
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   const commitMutation = useMutation({
@@ -74,7 +75,7 @@ export const RepoDetail: React.FC = () => {
       setCommitMessage('');
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   const pushMutation = useMutation({
@@ -83,7 +84,7 @@ export const RepoDetail: React.FC = () => {
       clearError();
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   const pullMutation = useMutation({
@@ -92,11 +93,11 @@ export const RepoDetail: React.FC = () => {
       clearError();
       queryClient.invalidateQueries({ queryKey: ['repo', id, 'status'] });
     },
-    onError: (err: any) => setErrorMsg(err.response?.data || err.message),
+    onError: (err: any) => setErrorMsg(getErrorMessage(err)),
   });
 
   if (isLoading) return <div>Loading status...</div>;
-  if (error) return <div className="text-red-500">Error loading status</div>;
+  if (error) return <div className="text-red-500">Error loading status: {getErrorMessage(error)}</div>;
   if (!status) return <div>No status available</div>;
 
   // Helper to check if file is staged (Staging status is not 0, 32-' ', or 63-'?')

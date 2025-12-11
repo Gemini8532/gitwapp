@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { ArrowLeft, FileCode } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const getLanguage = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -77,7 +78,7 @@ export const RepoFile: React.FC = () => {
                         </div>
                     ) : error ? (
                         <div className="p-4 text-red-500 bg-red-50 dark:bg-red-900/10 rounded">
-                            Error loading file: {(error as any).message}
+                            Error loading file: {getErrorMessage(error)}
                         </div>
                     ) : (
                         <SyntaxHighlighter
